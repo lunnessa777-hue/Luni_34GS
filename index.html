@@ -13,7 +13,7 @@ h1{font-size:clamp(27px,5vw,42px);line-height:1.12;margin:0 0 10px;letter-spacin
 .panel{background:rgba(18,29,46,.94);border:1px solid var(--line);border-radius:18px;padding:18px;margin:16px 0;box-shadow:0 12px 34px #0002}
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}.wide{grid-column:1/-1}label{display:block;color:#c8d5e5;font-size:13px;margin:0 0 7px}input{width:100%;min-height:46px;background:#0b1524;border:1px solid #34465f;border-radius:10px;color:var(--text);padding:11px 12px;font:inherit}input:focus{outline:2px solid #71d5b366;border-color:var(--accent)}
 .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}button,.linkbtn{border:0;border-radius:11px;padding:12px 16px;font:700 14px inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-height:44px}.primary{background:var(--accent);color:#082018}.secondary{background:#24344b;color:var(--text);border:1px solid #3a4c64}
-.note{font-size:12px;color:var(--muted);margin:12px 0 0}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:13px}.stat strong{display:block;font-size:24px;font-variant-numeric:tabular-nums}.stat span{font-size:12px;color:var(--muted)}
+.note{font-size:12px;color:var(--muted);margin:12px 0 0}.backend-only{display:none}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:13px}.stat strong{display:block;font-size:24px;font-variant-numeric:tabular-nums}.stat span{font-size:12px;color:var(--muted)}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.toolbar input{flex:1;min-width:180px}.toolbar .date{max-width:170px}
 .book{border:1px solid var(--line);border-radius:13px;margin:10px 0;overflow:hidden;background:#101b2b}.book summary{padding:13px 15px;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:center;list-style:none}.book summary::-webkit-details-marker{display:none}.bookname{font-weight:700}.count{font-size:12px;color:var(--muted);white-space:nowrap}.empty{padding:12px 15px;color:var(--muted);font-size:14px}
 .tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:660px;font-size:13px}th,td{text-align:left;padding:10px 12px;border-top:1px solid var(--line);white-space:nowrap}th{color:var(--muted);font-weight:600;background:#0c1726}td.score{font-weight:800;font-variant-numeric:tabular-nums}.result{font-weight:800}.win{color:#71d5b3}.draw{color:#f4c879}.loss{color:#f18f96}
@@ -33,12 +33,13 @@ h1{font-size:clamp(27px,5vw,42px);line-height:1.12;margin:0 0 10px;letter-spacin
       <div class="wide"><label for="goalooUrl">Goaloo 1X2 Odds maç bağlantısı</label><input id="goalooUrl" type="url" placeholder="https://www.goaloo.com/.../1x2-odds-123456" autocomplete="url"></div>
       <div><label for="fromDate">Başlangıç tarihi</label><input id="fromDate" type="date" value="2020-01-01"></div>
       <div><label for="toDate">Bitiş tarihi</label><input id="toDate" type="date" value="2026-12-31"></div>
+      <div class="wide backend-only" id="passwordField"><label for="appPassword">Kişisel erişim parolası</label><input id="appPassword" type="password" autocomplete="current-password" placeholder="Vercel ortam değişkeninde belirlediğiniz parola"></div>
     </div>
     <div class="actions">
       <button class="primary" id="runScan" type="button">GitHub Actions'ta taramayı aç</button>
       <label class="linkbtn secondary" for="jsonFile">Sonuç JSON dosyasını yükle</label><input class="hidden" id="jsonFile" type="file" accept="application/json,.json">
     </div>
-    <p class="note">Tarama, özel GitHub Actions iş akışında çalışır. Bu arayüz şu anda tarama sayfasını açar; güvenli sunucu bağlantısı kurulana kadar URL ve tarihleri GitHub Actions formuna ayrıca girmeniz gerekir. JSON dosyasını yüklediğinizde sonuçlar burada görüntülenir.</p>
+    <p class="note" id="scanNote">GitHub Pages sürümü sonuç JSON dosyasını yükleyip görüntüleyebilir. Otomatik tarama için Vercel üzerinde yayımlanan güvenli sürümü kullanın. JSON dosyasını yükleme seçeneği her zaman kullanılabilir.</p>
     <div id="status" class="status" role="status">Henüz sonuç dosyası yüklenmedi.</div>
   </section>
 
@@ -63,16 +64,55 @@ h1{font-size:clamp(27px,5vw,42px);line-height:1.12;margin:0 0 10px;letter-spacin
 </main>
 <script>
 const ACTIONS_URL="https://github.com/lunnessa777-hue/goaloo-bet365/actions/workflows/goaloo.yml";
+const AUTO_SCAN = !location.hostname.endsWith("github.io");
 let archive=null;
 const $=id=>document.getElementById(id);
 function setStatus(message){$("status").textContent=message}
-$("runScan").addEventListener("click",()=>{
+if(AUTO_SCAN){
+  $("passwordField").style.display="block";
+  $("runScan").textContent="Taramayı Başlat";
+  $("scanNote").textContent="Bu güvenli sürüm taramayı başlatır, ilerlemeyi izler ve sonuçları otomatik olarak bu sayfaya yükler. Erişim parolanız yalnızca bu oturumda kullanılır.";
+}
+$("runScan").addEventListener("click",async()=>{
   const url=$("goalooUrl").value.trim(), from=$("fromDate").value, to=$("toDate").value;
-  if(!/^https?:\/\/(www\.)?goaloo\.com\//i.test(url)){setStatus("Lütfen geçerli bir Goaloo maç bağlantısı girin.");return}
+  if(!/^https:\/\/(www\.)?goaloo\.com\//i.test(url)){setStatus("Lütfen geçerli bir Goaloo maç bağlantısı girin.");return}
   if(!/\/1x2-odds-/i.test(url)){setStatus("Bağlantı Goaloo 1X2 Odds sayfasına ait görünmüyor.");return}
   if(!from||!to||from>to){setStatus("Tarih aralığını kontrol edin.");return}
-  window.open(ACTIONS_URL,"_blank","noopener");
-  setStatus("GitHub Actions açıldı. Açılan sayfada Run workflow seçeneğini kullanıp Goaloo URL'sini ve tarih aralığını girin.");
+  if(!AUTO_SCAN){
+    window.open(ACTIONS_URL,"_blank","noopener");
+    setStatus("Otomatik tarama backend'i henüz GitHub Pages alanına bağlı değil. GitHub Actions açıldı; URL ve tarihleri orada ayrıca girin.");
+    return;
+  }
+  const password=$("appPassword").value;
+  if(!password){setStatus("Lütfen erişim parolanızı girin.");return}
+  $("runScan").disabled=true;
+  try{
+    setStatus("Tarama GitHub Actions'a gönderiliyor…");
+    const started=await fetch("/api/scan",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+password},body:JSON.stringify({goaloo_url:url,start_date:from,end_date:to})});
+    const startData=await started.json();
+    if(!started.ok)throw new Error(startData.error||"Tarama başlatılamadı.");
+    const began=Date.now();
+    while(Date.now()-began<30*60*1000){
+      await new Promise(resolve=>setTimeout(resolve,10000));
+      setStatus("Bookmaker geçmişleri taranıyor… Bu işlem birkaç dakika sürebilir.");
+      const check=await fetch("/api/status?since="+encodeURIComponent(startData.since)+"&request_id="+encodeURIComponent(startData.request_id),{headers:{"authorization":"Bearer "+password}});
+      const state=await check.json();
+      if(!check.ok)throw new Error(state.error||"Tarama durumu alınamadı.");
+      if(state.state==="completed"&&state.archive){
+        archive=state.archive;
+        $("results").classList.remove("hidden");
+        $("filterFrom").value=archive.start_date||from;
+        $("filterTo").value=archive.end_date||to;
+        render();
+        setStatus("Tarama tamamlandı. "+(archive.bookmaker_count||archive.results.length)+" bookmaker sonucu yüklendi.");
+        $("results").scrollIntoView({behavior:"smooth",block:"start"});
+        return;
+      }
+      if(state.state==="failed"||state.error)throw new Error(state.message||state.error||"Tarama başarısız oldu.");
+    }
+    throw new Error("Tarama 30 dakika içinde tamamlanmadı. GitHub Actions sayfasından durumunu kontrol edin.");
+  }catch(err){setStatus("Tarama hatası: "+err.message)}
+  finally{$("runScan").disabled=false}
 });
 $("jsonFile").addEventListener("change",async e=>{
   const file=e.target.files?.[0];if(!file)return;
