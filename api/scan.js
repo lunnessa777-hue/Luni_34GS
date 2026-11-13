@@ -1,11 +1,11 @@
 const { OWNER, REPO, WORKFLOW, json, cors, authorized, gh, validateInput } = require("../lib/github");
 
 module.exports = async (req, res) => {
-  if (req.method === "OPTIONS") return res.status(204).setHeader("Access-Control-Allow-Origin", origin || "https://lunnessa777-hue.github.io").setHeader("Access-Control-Allow-Methods", "POST, OPTIONS").setHeader("Access-Control-Allow-Headers", "authorization, content-type").end();
   const origin = req.headers.origin;
   const host = req.headers["x-forwarded-host"] || req.headers.host;
   const sameOrigin = origin && host && origin === "https://" + host;
   if (origin && origin !== "https://lunnessa777-hue.github.io" && !sameOrigin) return res.status(403).json({ error: "Origin not allowed" });
+  if (req.method === "OPTIONS") return res.status(204).setHeader("Access-Control-Allow-Origin", origin || "https://lunnessa777-hue.github.io").setHeader("Access-Control-Allow-Methods", "POST, OPTIONS").setHeader("Access-Control-Allow-Headers", "authorization, content-type").end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!authorized(req, process.env)) return res.status(401).json({ error: "Erişim parolası hatalı." });
   try {
