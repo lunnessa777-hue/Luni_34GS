@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101827">
+<title>Goaloo Total — Maç Arşivi</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#121d2e;--panel2:#172438;--line:#26364d;--text:#edf3fb;--muted:#9aabc0;--accent:#71d5b3;--warn:#f4c879}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#101b2c 0,#0b1220 360px);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{width:min(1120px,100%);margin:auto;padding:28px 18px 60px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:24px}.brand{font-weight:800;letter-spacing:.02em;font-size:19px}.tag{border:1px solid #315347;color:var(--accent);border-radius:999px;padding:5px 10px;font-size:12px}
+h1{font-size:clamp(27px,5vw,42px);line-height:1.12;margin:0 0 10px;letter-spacing:-.03em}.intro{color:var(--muted);max-width:680px;margin:0 0 24px}
+.panel{background:rgba(18,29,46,.94);border:1px solid var(--line);border-radius:18px;padding:18px;margin:16px 0;box-shadow:0 12px 34px #0002}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}.wide{grid-column:1/-1}label{display:block;color:#c8d5e5;font-size:13px;margin:0 0 7px}input{width:100%;min-height:46px;background:#0b1524;border:1px solid #34465f;border-radius:10px;color:var(--text);padding:11px 12px;font:inherit}input:focus{outline:2px solid #71d5b366;border-color:var(--accent)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:15px}button,.linkbtn{border:0;border-radius:11px;padding:12px 16px;font:700 14px inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-height:44px}.primary{background:var(--accent);color:#082018}.secondary{background:#24344b;color:var(--text);border:1px solid #3a4c64}
+.note{font-size:12px;color:var(--muted);margin:12px 0 0}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:13px}.stat strong{display:block;font-size:24px;font-variant-numeric:tabular-nums}.stat span{font-size:12px;color:var(--muted)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.toolbar input{flex:1;min-width:180px}.toolbar .date{max-width:170px}
+.book{border:1px solid var(--line);border-radius:13px;margin:10px 0;overflow:hidden;background:#101b2b}.book summary{padding:13px 15px;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:center;list-style:none}.book summary::-webkit-details-marker{display:none}.bookname{font-weight:700}.count{font-size:12px;color:var(--muted);white-space:nowrap}.empty{padding:12px 15px;color:var(--muted);font-size:14px}
+.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:660px;font-size:13px}th,td{text-align:left;padding:10px 12px;border-top:1px solid var(--line);white-space:nowrap}th{color:var(--muted);font-weight:600;background:#0c1726}td.score{font-weight:800;font-variant-numeric:tabular-nums}.result{font-weight:800}.win{color:#71d5b3}.draw{color:#f4c879}.loss{color:#f18f96}
+.status{margin-top:12px;padding:12px;border-radius:10px;background:#0c1726;color:var(--muted);font-size:13px}.hidden{display:none!important}
+@media(max-width:650px){main{padding:20px 13px 44px}.panel{padding:14px;border-radius:15px}.fields{grid-template-columns:1fr}.wide{grid-column:auto}.stats{grid-template-columns:repeat(2,1fr)}.top{margin-bottom:18px}.actions>*{width:100%}.toolbar input,.toolbar .date{max-width:none;width:100%}}
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><div class="brand">GOALOO <span style="color:var(--accent)">TOTAL</span></div><span class="tag">1X2 · Initial · Total</span></div>
+  <h1>Tarihsel maç arşivi</h1>
+  <p class="intro">Bookmaker bazında tamamlanmış maçları görüntüleyin. Sonuçlar lig, tarih, ev sahibi, skor, deplasman ve 1X2 sonucu alanlarıyla listelenir.</p>
+
+  <section class="panel" aria-labelledby="scanTitle">
+    <h2 id="scanTitle" style="font-size:17px;margin:0 0 14px">Yeni tarama</h2>
+    <div class="fields">
+      <div class="wide"><label for="goalooUrl">Goaloo 1X2 Odds maç bağlantısı</label><input id="goalooUrl" type="url" placeholder="https://www.goaloo.com/.../1x2-odds-123456" autocomplete="url"></div>
+      <div><label for="fromDate">Başlangıç tarihi</label><input id="fromDate" type="date" value="2020-01-01"></div>
+      <div><label for="toDate">Bitiş tarihi</label><input id="toDate" type="date" value="2026-12-31"></div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="runScan" type="button">GitHub Actions'ta taramayı aç</button>
+      <label class="linkbtn secondary" for="jsonFile">Sonuç JSON dosyasını yükle</label><input class="hidden" id="jsonFile" type="file" accept="application/json,.json">
+    </div>
+    <p class="note">Tarama, özel GitHub Actions iş akışında çalışır. Bu arayüz şu anda tarama sayfasını açar; güvenli sunucu bağlantısı kurulana kadar URL ve tarihleri GitHub Actions formuna ayrıca girmeniz gerekir. JSON dosyasını yüklediğinizde sonuçlar burada görüntülenir.</p>
+    <div id="status" class="status" role="status">Henüz sonuç dosyası yüklenmedi.</div>
+  </section>
+
+  <section id="results" class="hidden">
+    <div class="panel">
+      <div class="stats">
+        <div class="stat"><strong id="bookTotal">0</strong><span>Bookmaker</span></div>
+        <div class="stat"><strong id="withMatches">0</strong><span>Maç bulunan</span></div>
+        <div class="stat"><strong id="noMatches">0</strong><span>Maç yok</span></div>
+        <div class="stat"><strong id="matchTotal">0</strong><span>Toplam maç kaydı</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="toolbar">
+        <input id="bookSearch" type="search" placeholder="Bookmaker ara…" aria-label="Bookmaker ara">
+        <input class="date" id="filterFrom" type="date" aria-label="Filtre başlangıç tarihi">
+        <input class="date" id="filterTo" type="date" aria-label="Filtre bitiş tarihi">
+      </div>
+      <div id="bookList" style="margin-top:12px"></div>
+    </div>
+  </section>
+</main>
+<script>
+const ACTIONS_URL="https://github.com/lunnessa777-hue/goaloo-bet365/actions/workflows/goaloo.yml";
+let archive=null;
+const $=id=>document.getElementById(id);
+function setStatus(message){$("status").textContent=message}
+$("runScan").addEventListener("click",()=>{
+  const url=$("goalooUrl").value.trim(), from=$("fromDate").value, to=$("toDate").value;
+  if(!/^https?:\/\/(www\.)?goaloo\.com\//i.test(url)){setStatus("Lütfen geçerli bir Goaloo maç bağlantısı girin.");return}
+  if(!/\/1x2-odds-/i.test(url)){setStatus("Bağlantı Goaloo 1X2 Odds sayfasına ait görünmüyor.");return}
+  if(!from||!to||from>to){setStatus("Tarih aralığını kontrol edin.");return}
+  window.open(ACTIONS_URL,"_blank","noopener");
+  setStatus("GitHub Actions açıldı. Açılan sayfada Run workflow seçeneğini kullanıp Goaloo URL'sini ve tarih aralığını girin.");
+});
+$("jsonFile").addEventListener("change",async e=>{
+  const file=e.target.files?.[0];if(!file)return;
+  try{
+    const parsed=JSON.parse(await file.text());
+    if(!Array.isArray(parsed.results))throw new Error("JSON içinde results dizisi bulunamadı.");
+    archive=parsed;
+    $("results").classList.remove("hidden");
+    $("filterFrom").value=parsed.start_date||"";
+    $("filterTo").value=parsed.end_date||"";
+    render();
+    setStatus("Sonuç dosyası yüklendi: "+file.name);
+    $("results").scrollIntoView({behavior:"smooth",block:"start"});
+  }catch(err){setStatus("Dosya okunamadı: "+err.message)}
+});
+["bookSearch","filterFrom","filterTo"].forEach(id=>$(id).addEventListener("input",render));
+function getRows(item){return Array.isArray(item.matches)?item.matches:(Array.isArray(item.rows)?item.rows:[])}
+function getDate(m){return String(m.date||m.time||m.match_date||"").slice(0,10)}
+function getField(m,...keys){for(const k of keys)if(m[k]!==undefined&&m[k]!==null)return m[k];return ""}
+function resultClass(v){const s=String(v).toLowerCase();return s==="w"||s==="win"||s==="1"?"win":s==="d"||s==="draw"||s==="x"?"draw":s==="l"||s==="loss"||s==="2"?"loss":""}
+function render(){
+ if(!archive)return;
+ const q=$("bookSearch").value.trim().toLowerCase(),from=$("filterFrom").value,to=$("filterTo").value;
+ const entries=archive.results.map((b,i)=>{
+  const name=b.bookmaker||b.company||b.name||("Bookmaker "+(i+1));
+  const rows=getRows(b).filter(m=>{const d=getDate(m);return(!from||!d||d>=from)&&(!to||!d||d<=to)});
+  return{name,rows,error:b.error};
+ }).filter(b=>b.name.toLowerCase().includes(q));
+ const total=archive.results.length, allRows=entries.reduce((n,b)=>n+b.rows.length,0);
+ $("bookTotal").textContent=total;
+ $("withMatches").textContent=archive.results.filter(b=>getRows(b).length>0).length;
+ $("noMatches").textContent=archive.results.filter(b=>getRows(b).length===0).length;
+ $("matchTotal").textContent=archive.results.reduce((n,b)=>n+getRows(b).length,0);
+ $("bookList").innerHTML=entries.map((b,i)=>{
+  const body=b.error?'<div class="empty">Tarama hatası: '+escapeHtml(b.error)+'</div>':b.rows.length?'<div class="tablewrap"><table><thead><tr><th>Lig</th><th>Tarih</th><th>Ev sahibi</th><th>Skor</th><th>Deplasman</th><th>1X2</th></tr></thead><tbody>'+b.rows.map(m=>{
+   const res=getField(m,"result","one_x_two","wdl");
+   return '<tr><td>'+escapeHtml(getField(m,"league","sclass"))+'</td><td>'+escapeHtml(getDate(m))+'</td><td>'+escapeHtml(getField(m,"home","home_team"))+'</td><td class="score">'+escapeHtml(getField(m,"score")||((getField(m,"home_score")??"")+"-"+(getField(m,"away_score")??"")))+'</td><td>'+escapeHtml(getField(m,"away","away_team"))+'</td><td class="result '+resultClass(res)+'">'+escapeHtml(res)+'</td></tr>'
+  }).join("")+'</tbody></table></div>':'<div class="empty">Maç yok</div>';
+  return '<details class="book" '+(i===0?'open':'')+'><summary><span class="bookname">'+escapeHtml(b.name)+'</span><span class="count">'+b.rows.length+' maç</span></summary>'+body+'</details>';
+ }).join("")||'<div class="empty">Aramayla eşleşen bookmaker bulunamadı.</div>';
+}
+function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+</script>
+</body></html>
