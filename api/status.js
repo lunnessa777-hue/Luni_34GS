@@ -2,8 +2,10 @@ const { OWNER, REPO, WORKFLOW, authorized, gh, extractZipFile } = require("../li
 
 module.exports = async (req, res) => {
   const origin = req.headers.origin;
-  if (origin && origin !== "https://lunnessa777-hue.github.io") return res.status(403).json({ error: "Origin not allowed" });
-  res.setHeader("Access-Control-Allow-Origin", "https://lunnessa777-hue.github.io");
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  const sameOrigin = origin && host && origin === "https://" + host;
+  if (origin && origin !== "https://lunnessa777-hue.github.io" && !sameOrigin) return res.status(403).json({ error: "Origin not allowed" });
+  res.setHeader("Access-Control-Allow-Origin", origin || "https://lunnessa777-hue.github.io");
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
   if (!authorized(req, process.env)) return res.status(401).json({ error: "Erişim parolası hatalı." });
