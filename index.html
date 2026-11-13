@@ -174,17 +174,18 @@ function renderAnalytics(entries){
 function render(){
  if(!archive)return;
  const q=$("bookSearch").value.trim().toLowerCase(),from=$("filterFrom").value,to=$("filterTo").value;
- const entries=archive.results.map((b,i)=>{
+ const dateEntries=archive.results.map((b,i)=>{
   const name=b.bookmaker||b.company||b.name||("Bookmaker "+(i+1));
   const rows=getRows(b).filter(m=>{const d=getDate(m);return(!from||!d||d>=from)&&(!to||!d||d<=to)});
   return{name,rows,error:b.error};
- }).filter(b=>b.name.toLowerCase().includes(q)&&b.rows.length>0);
- const allRows=entries.reduce((n,b)=>n+b.rows.length,0);
- $("bookTotal").textContent=entries.length;
- $("withMatches").textContent=entries.length;
- $("noMatches").textContent=archive.results.length-entries.length;
+ }).filter(b=>b.rows.length>0);
+ const entries=dateEntries.filter(b=>b.name.toLowerCase().includes(q));
+ const allRows=dateEntries.reduce((n,b)=>n+b.rows.length,0);
+ $("bookTotal").textContent=dateEntries.length;
+ $("withMatches").textContent=dateEntries.length;
+ $("noMatches").textContent=archive.results.length-dateEntries.length;
  $("matchTotal").textContent=allRows;
- renderAnalytics(entries);
+ renderAnalytics(dateEntries);
  $("bookList").innerHTML=entries.map((b,i)=>{
   const body='<div class="tablewrap"><table><thead><tr><th>Lig</th><th>Tarih</th><th>Ev sahibi</th><th>Skor</th><th>Deplasman</th><th>1X2</th></tr></thead><tbody>'+b.rows.map(m=>{
    const res=getField(m,"result","one_x_two","wdl");
