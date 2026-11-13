@@ -1,4 +1,4 @@
-const { OWNER, REPO, WORKFLOW, json, cors, authorized, gh, validateInput } = require("./_shared");
+const { OWNER, REPO, WORKFLOW, json, cors, authorized, gh, validateInput } = require("../lib/github");
 
 module.exports = async (req, res) => {
   if (req.method === "OPTIONS") return res.status(204).setHeader("Access-Control-Allow-Origin", "https://lunnessa777-hue.github.io").setHeader("Access-Control-Allow-Methods", "POST, OPTIONS").setHeader("Access-Control-Allow-Headers", "authorization, content-type").end();
