@@ -70,6 +70,8 @@ h1{font-size:clamp(27px,5vw,42px);line-height:1.12;margin:0 0 10px;letter-spacin
 const ACTIONS_URL="https://github.com/lunnessa777-hue/goaloo-bet365/actions/workflows/goaloo.yml";
 const AUTO_SCAN = !location.hostname.endsWith("github.io");
 let archive=null;
+let scanClock=null;
+let scanStartedAt=0;
 const $=id=>document.getElementById(id);
 function setStatus(message){$("status").textContent=message}
 if(AUTO_SCAN){
@@ -90,6 +92,9 @@ $("runScan").addEventListener("click",async()=>{
   const password=$("appPassword").value;
   if(!password){setStatus("Lütfen erişim parolanızı girin.");return}
   $("runScan").disabled=true;
+  scanStartedAt=Date.now();
+  const updateClock=()=>setStatus("Tarama sürüyor · "+formatElapsed(Date.now()-scanStartedAt)+" · Bookmaker geçmişleri kontrol ediliyor…");
+  scanClock=setInterval(updateClock,1000);
   try{
     setStatus("Tarama GitHub Actions'a gönderiliyor…");
     const started=await fetch("/api/scan",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+password},body:JSON.stringify({goaloo_url:url,start_date:from,end_date:to})});
@@ -98,7 +103,7 @@ $("runScan").addEventListener("click",async()=>{
     const began=Date.now();
     while(Date.now()-began<30*60*1000){
       await new Promise(resolve=>setTimeout(resolve,10000));
-      setStatus("Bookmaker geçmişleri taranıyor… Bu işlem birkaç dakika sürebilir.");
+      updateClock();
       const check=await fetch("/api/status?since="+encodeURIComponent(startData.since)+"&request_id="+encodeURIComponent(startData.request_id),{headers:{"authorization":"Bearer "+password}});
       const state=await check.json();
       if(!check.ok)throw new Error(state.error||"Tarama durumu alınamadı.");
@@ -116,7 +121,7 @@ $("runScan").addEventListener("click",async()=>{
     }
     throw new Error("Tarama 30 dakika içinde tamamlanmadı. GitHub Actions sayfasından durumunu kontrol edin.");
   }catch(err){setStatus("Tarama hatası: "+err.message)}
-  finally{$("runScan").disabled=false}
+  finally{if(scanClock){clearInterval(scanClock);scanClock=null}$("runScan").disabled=false}
 });
 $("jsonFile").addEventListener("change",async e=>{
   const file=e.target.files?.[0];if(!file)return;
@@ -137,6 +142,35 @@ function getRows(item){return Array.isArray(item.matches)?item.matches:(Array.is
 function getDate(m){return String(m.date||m.time||m.match_date||"").slice(0,10)}
 function getField(m,...keys){for(const k of keys)if(m[k]!==undefined&&m[k]!==null)return m[k];return ""}
 function resultClass(v){const s=String(v).toLowerCase();return s==="w"||s==="win"||s==="1"?"win":s==="d"||s==="draw"||s==="x"?"draw":s==="l"||s==="loss"||s==="2"?"loss":""}
+function formatElapsed(ms){const sec=Math.floor(ms/1000),m=Math.floor(sec/60),s=sec%60;return String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")}
+function scoreParts(m){
+ const raw=String(getField(m,"score")||"");
+ const match=raw.match(/(\d+)\s*[-:]\s*(\d+)/);
+ if(match)return [Number(match[1]),Number(match[2])];
+ const h=Number(getField(m,"home_score")),a=Number(getField(m,"away_score"));
+ return Number.isFinite(h)&&Number.isFinite(a)?[h,a]:null;
+}
+function uniqueMatches(entries){
+ const seen=new Set(),out=[];
+ entries.forEach(b=>b.rows.forEach(m=>{
+  const p=scoreParts(m);if(!p)return;
+  const key=[getDate(m),getField(m,"league","sclass"),getField(m,"home","home_team"),getField(m,"away","away_team"),p.join("-")].join("|").toLowerCase();
+  if(!seen.has(key)){seen.add(key);out.push({home:p[0],away:p[1]})}
+ }));
+ return out;
+}
+function renderAnalytics(entries){
+ const games=uniqueMatches(entries),n=games.length;
+ if(!n){$("analytics").innerHTML='<div class="empty">İstatistik oluşturmak için seçilen tarihlerde maç bulunamadı.</div>';return}
+ const scoreCounts={};games.forEach(g=>{const k=g.home+"-"+g.away;scoreCounts[k]=(scoreCounts[k]||0)+1});
+ const ranked=Object.entries(scoreCounts).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],undefined,{numeric:true}));
+ const ou=[1.5,2.5,3.5,4.5,5.5].map(line=>{
+  const over=games.filter(g=>g.home+g.away>line).length,under=n-over;
+  return '<div class="metric-row"><span>Üst '+line+'</span><strong>'+((over/n)*100).toFixed(1)+'%</strong></div><div class="metric-row"><span>Alt '+line+'</span><strong>'+((under/n)*100).toFixed(1)+'%</strong></div>';
+ }).join("");
+ const btts=games.filter(g=>g.home>0&&g.away>0).length,yes=(btts/n)*100;
+ $("analytics").innerHTML='<div class="metric"><h3>En sık çıkan skorlar <span class="count">('+n+' farklı maç)</span></h3>'+ranked.map(([score,count])=>'<div class="score-rank"><span>'+escapeHtml(score)+'</span><strong>'+count+'</strong></div>').join("")+'</div><div class="metric"><h3>Alt / Üst yüzdeleri</h3>'+ou+'</div><div class="metric"><h3>Karşılıklı gol (KG)</h3><div class="metric-row"><span>KG Var</span><strong class="positive">'+yes.toFixed(1)+'%</strong></div><div class="metric-row"><span>KG Yok</span><strong>'+(100-yes).toFixed(1)+'%</strong></div></div>';
+}
 function render(){
  if(!archive)return;
  const q=$("bookSearch").value.trim().toLowerCase(),from=$("filterFrom").value,to=$("filterTo").value;
@@ -144,19 +178,20 @@ function render(){
   const name=b.bookmaker||b.company||b.name||("Bookmaker "+(i+1));
   const rows=getRows(b).filter(m=>{const d=getDate(m);return(!from||!d||d>=from)&&(!to||!d||d<=to)});
   return{name,rows,error:b.error};
- }).filter(b=>b.name.toLowerCase().includes(q));
- const total=archive.results.length, allRows=entries.reduce((n,b)=>n+b.rows.length,0);
- $("bookTotal").textContent=total;
- $("withMatches").textContent=archive.results.filter(b=>getRows(b).length>0).length;
- $("noMatches").textContent=archive.results.filter(b=>getRows(b).length===0).length;
- $("matchTotal").textContent=archive.results.reduce((n,b)=>n+getRows(b).length,0);
+ }).filter(b=>b.name.toLowerCase().includes(q)&&b.rows.length>0);
+ const allRows=entries.reduce((n,b)=>n+b.rows.length,0);
+ $("bookTotal").textContent=entries.length;
+ $("withMatches").textContent=entries.length;
+ $("noMatches").textContent=archive.results.length-entries.length;
+ $("matchTotal").textContent=allRows;
+ renderAnalytics(entries);
  $("bookList").innerHTML=entries.map((b,i)=>{
-  const body=b.error?'<div class="empty">Tarama hatası: '+escapeHtml(b.error)+'</div>':b.rows.length?'<div class="tablewrap"><table><thead><tr><th>Lig</th><th>Tarih</th><th>Ev sahibi</th><th>Skor</th><th>Deplasman</th><th>1X2</th></tr></thead><tbody>'+b.rows.map(m=>{
+  const body='<div class="tablewrap"><table><thead><tr><th>Lig</th><th>Tarih</th><th>Ev sahibi</th><th>Skor</th><th>Deplasman</th><th>1X2</th></tr></thead><tbody>'+b.rows.map(m=>{
    const res=getField(m,"result","one_x_two","wdl");
-   return '<tr><td>'+escapeHtml(getField(m,"league","sclass"))+'</td><td>'+escapeHtml(getDate(m))+'</td><td>'+escapeHtml(getField(m,"home","home_team"))+'</td><td class="score">'+escapeHtml(getField(m,"score")||((getField(m,"home_score")??"")+"-"+(getField(m,"away_score")??"")))+'</td><td>'+escapeHtml(getField(m,"away","away_team"))+'</td><td class="result '+resultClass(res)+'">'+escapeHtml(res)+'</td></tr>'
-  }).join("")+'</tbody></table></div>':'<div class="empty">Maç yok</div>';
-  return '<details class="book" '+(i===0?'open':'')+'><summary><span class="bookname">'+escapeHtml(b.name)+'</span><span class="count">'+b.rows.length+' maç</span></summary>'+body+'</details>';
- }).join("")||'<div class="empty">Aramayla eşleşen bookmaker bulunamadı.</div>';
+   return '<tr><td>'+escapeHtml(getField(m,"league","sclass"))+'</td><td>'+escapeHtml(getDate(m))+'</td><td>'+escapeHtml(getField(m,"home","home_team"))+'</td><td class="score">'+escapeHtml(getField(m,"score")||((getField(m,"home_score")??"")+"-"+(getField(m,"away_score")??"")))+'</td><td>'+escapeHtml(getField(m,"away","away_team"))+'</td><td class="result '+resultClass(res)+'">'+escapeHtml(res)+'</td></tr>';
+  }).join("")+'</tbody></table></div>';
+  return '<details class="book" '+(i===0?"open":"")+'><summary><span class="bookname">'+escapeHtml(b.name)+'</span><span class="count has-matches">'+b.rows.length+' maç</span></summary>'+body+'</details>';
+ }).join("")||'<div class="empty">Seçilen tarih aralığında maç bulunan bookmaker yok.</div>';
 }
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 </script>
