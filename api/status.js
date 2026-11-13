@@ -1,4 +1,4 @@
-const { OWNER, REPO, WORKFLOW, authorized, gh, extractZipFile } = require("./_shared");
+const { OWNER, REPO, WORKFLOW, authorized, gh, extractZipFile } = require("../lib/github");
 
 module.exports = async (req, res) => {
   const origin = req.headers.origin;
