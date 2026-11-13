@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
     const requestId = String(req.query.request_id || "");
     if (!since || Number.isNaN(Date.parse(since)) || !/^[a-f0-9-]{36}$/i.test(requestId)) return res.status(400).json({ error: "Tarama kimliği eksik veya geçersiz." });
     const data = await gh("/repos/" + OWNER + "/" + REPO + "/actions/workflows/" + WORKFLOW + "/runs?event=workflow_dispatch&branch=main&per_page=10", process.env);
-    const run = (data.workflow_runs || []).find(x => Date.parse(x.created_at) >= Date.parse(since) - 60000 && String(x.name || "").includes(requestId));
+    const run = (data.workflow_runs || []).find(x => Date.parse(x.created_at) >= Date.parse(since) - 60000 && String(x.display_title || x.name || "").includes(requestId));
     if (!run) return res.status(200).json({ state: "queued", message: "GitHub tarama işlemi başlatılıyor." });
     if (run.status !== "completed") return res.status(200).json({ state: run.status || "in_progress", message: "Bookmaker geçmişleri taranıyor.", run_url: run.html_url });
     if (run.conclusion !== "success") return res.status(200).json({ state: "failed", message: "Tarama başarısız oldu. GitHub Actions kayıtlarını kontrol edin.", run_url: run.html_url });
