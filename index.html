@@ -177,12 +177,12 @@ function render(){
  const dateEntries=archive.results.map((b,i)=>{
   const name=b.bookmaker||b.company||b.name||("Bookmaker "+(i+1));
   const rows=getRows(b).filter(m=>{const d=getDate(m);return(!from||!d||d>=from)&&(!to||!d||d<=to)});
-  return{name,rows,error:b.error};
- }).filter(b=>b.rows.length>0||b.error);
+  return{name,rows};
+ }).filter(b=>b.rows.length>0);
  const entries=dateEntries.filter(b=>b.name.toLowerCase().includes(q));
  const allRows=dateEntries.reduce((n,b)=>n+b.rows.length,0);
  $("bookTotal").textContent=dateEntries.length;
- $("withMatches").textContent=dateEntries.filter(b=>b.rows.length>0).length;
+ $("withMatches").textContent=dateEntries.length;
  $("noMatches").textContent=archive.results.length-dateEntries.length;
  $("matchTotal").textContent=allRows;
  renderAnalytics(dateEntries);
@@ -191,7 +191,7 @@ function render(){
    const res=getField(m,"result","one_x_two","wdl");
    return '<tr><td>'+escapeHtml(getField(m,"league","sclass"))+'</td><td>'+escapeHtml(getDate(m))+'</td><td>'+escapeHtml(getField(m,"home","home_team"))+'</td><td class="score">'+escapeHtml(getField(m,"score")||((getField(m,"home_score")??"")+"-"+(getField(m,"away_score")??"")))+'</td><td>'+escapeHtml(getField(m,"away","away_team"))+'</td><td class="result '+resultClass(res)+'">'+escapeHtml(res)+'</td></tr>';
   }).join("")+'</tbody></table></div>';
-  const initialBlock=b.error?'<div class="empty">Initial tarama hatası: '+escapeHtml(b.error)+'</div>':(b.rows.length?'<h3 class="section-title" style="margin:14px 15px 0">Initial</h3>'+renderTable(b.rows):'<div class="empty">Initial: Maç yok</div>');
+  const initialBlock='<h3 class="section-title" style="margin:14px 15px 0">Initial</h3>'+renderTable(b.rows);
   return '<details class="book" '+(i===0?"open":"")+'><summary><span class="bookname">'+escapeHtml(b.name)+'</span><span class="count has-matches">'+b.rows.length+' maç</span></summary>'+initialBlock+'</details>';
  }).join("")||'<div class="empty">Seçilen tarih aralığında maç bulunan bookmaker yok.</div>';
 }
