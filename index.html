@@ -177,13 +177,12 @@ function render(){
  const dateEntries=archive.results.map((b,i)=>{
   const name=b.bookmaker||b.company||b.name||("Bookmaker "+(i+1));
   const rows=getRows(b).filter(m=>{const d=getDate(m);return(!from||!d||d>=from)&&(!to||!d||d<=to)});
-  const liveRows=getRows(b,"live_matches").filter(m=>{const d=getDate(m);return(!from||!d||d>=from)&&(!to||!d||d<=to)});
-  return{name,rows,liveRows,error:b.error,liveError:b.live_error};
- }).filter(b=>b.rows.length>0||b.liveRows.length>0||b.error||b.liveError);
+  return{name,rows,error:b.error};
+ }).filter(b=>b.rows.length>0||b.error);
  const entries=dateEntries.filter(b=>b.name.toLowerCase().includes(q));
  const allRows=dateEntries.reduce((n,b)=>n+b.rows.length,0);
  $("bookTotal").textContent=dateEntries.length;
- $("withMatches").textContent=dateEntries.length;
+ $("withMatches").textContent=dateEntries.filter(b=>b.rows.length>0).length;
  $("noMatches").textContent=archive.results.length-dateEntries.length;
  $("matchTotal").textContent=allRows;
  renderAnalytics(dateEntries);
@@ -193,8 +192,7 @@ function render(){
    return '<tr><td>'+escapeHtml(getField(m,"league","sclass"))+'</td><td>'+escapeHtml(getDate(m))+'</td><td>'+escapeHtml(getField(m,"home","home_team"))+'</td><td class="score">'+escapeHtml(getField(m,"score")||((getField(m,"home_score")??"")+"-"+(getField(m,"away_score")??"")))+'</td><td>'+escapeHtml(getField(m,"away","away_team"))+'</td><td class="result '+resultClass(res)+'">'+escapeHtml(res)+'</td></tr>';
   }).join("")+'</tbody></table></div>';
   const initialBlock=b.error?'<div class="empty">Initial tarama hatası: '+escapeHtml(b.error)+'</div>':(b.rows.length?'<h3 class="section-title" style="margin:14px 15px 0">Initial</h3>'+renderTable(b.rows):'<div class="empty">Initial: Maç yok</div>');
-  const liveBlock=b.liveError?'<div class="empty">Live tarama hatası: '+escapeHtml(b.liveError)+'</div>':(b.liveRows.length?'<h3 class="section-title" style="margin:14px 15px 0">Live</h3>'+renderTable(b.liveRows):'<div class="empty">Live: Maç yok</div>');
-  return '<details class="book" '+(i===0?"open":"")+'><summary><span class="bookname">'+escapeHtml(b.name)+'</span><span class="count has-matches">Initial '+b.rows.length+' · Live '+b.liveRows.length+'</span></summary>'+initialBlock+liveBlock+'</details>';
+  return '<details class="book" '+(i===0?"open":"")+'><summary><span class="bookname">'+escapeHtml(b.name)+'</span><span class="count has-matches">'+b.rows.length+' maç</span></summary>'+initialBlock+'</details>';
  }).join("")||'<div class="empty">Seçilen tarih aralığında maç bulunan bookmaker yok.</div>';
 }
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
